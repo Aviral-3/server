@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>MediKL — Elite CMR Platform</title>
+  <meta name="description" content="The world's most advanced medical representative reporting platform." />
+  
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Outfit:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  
+  <!-- Styles -->
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+  <!-- ===================== LOGIN SCREEN ===================== -->
+  <div id="screen-login" class="screen active">
+    <div class="login-header animate-fade">
+      <div class="login-logo-container">Mk</div>
+      <h1 class="login-title">MediKL</h1>
+      <p class="login-subtitle">Global CMR Reporting Elite</p>
+    </div>
+    
+    <div class="login-card animate-fade" style="animation-delay: 0.1s">
+      <div class="input-group">
+        <label for="emp-id">Professional ID</label>
+        <input type="text" id="emp-id" class="input-field" placeholder="e.g. MR-2024-011" value="MR-2024-011" />
+      </div>
+      <div class="input-group">
+        <label for="password">Access Key</label>
+        <input type="password" id="password" class="input-field" placeholder="••••••••" value="password123" />
+      </div>
+      <button class="primary-button" id="login-btn" onclick="doLogin()">
+        <span>Authenticate Access</span>
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+      </button>
+      <p style="text-align: center; font-size: 11px; color: var(--text-muted); margin-top: 20px; text-transform: uppercase; letter-spacing: 1px;">Secure Corporate Gateway</p>
+    </div>
+  </div>
+
+  <!-- ===================== MAIN APP SHELL ===================== -->
+  <div id="app-shell" class="app-shell hidden">
+    
+    <!-- Top Nav -->
+    <header class="top-nav">
+      <div class="nav-profile">
+        <div class="profile-avatar">RK</div>
+        <div class="profile-info">
+          <div class="profile-name">Rahul Kapoor</div>
+          <div class="profile-rank">Senior MR • Mumbai</div>
+        </div>
+      </div>
+      <div class="nav-actions">
+        <div class="icon-button" onclick="doLogout()" title="Exit System">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/></svg>
+        </div>
+      </div>
+    </header>
+
+    <!-- Content Area -->
+    <main class="content-area">
+
+      <!-- ====== DASHBOARD (AREA BLOCKS) ====== -->
+      <div id="screen-dashboard" class="inner-screen active">
+        <div class="hero-stats animate-fade">
+          <div class="stat-block">
+            <span class="stat-label">Daily Target</span>
+            <span class="stat-value">24</span>
+            <span class="stat-trend trend-up">
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M12 19V5M5 12l7-7 7 7"/></svg>
+              82% Complete
+            </span>
+          </div>
+          <div class="stat-block">
+            <span class="stat-label">Pending</span>
+            <span class="stat-value">06</span>
+            <span class="stat-trend" style="color: var(--warning)">
+              Requires Action
+            </span>
+          </div>
+        </div>
+
+        <h2 class="section-title animate-fade" style="animation-delay: 0.1s">Regional Blocks</h2>
+        <div class="area-grid" id="area-grid">
+          <!-- Area Blocks populated by JS -->
+        </div>
+      </div>
+
+      <!-- ====== DOCTORS (DOCTOR BLOCKS) ====== -->
+      <div id="screen-doctors" class="inner-screen">
+        <div class="step-header">
+          <button class="icon-button" onclick="goBack()" style="margin-bottom: 16px;">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+          </button>
+          <h2 id="area-name-title" class="section-title" style="margin-top: 0">Bandra West</h2>
+          <div class="input-group" style="margin-bottom: 0">
+            <input type="text" id="doctor-search" class="input-field" placeholder="Search Doctor Blocks..." oninput="filterDoctors()" />
+          </div>
+        </div>
+        <div id="doctor-list">
+          <!-- Doctor Blocks populated by JS -->
+        </div>
+      </div>
+
+      <!-- ====== ORDER FLOW ====== -->
+      <div id="screen-order" class="inner-screen">
+        <div class="step-header">
+          <button class="icon-button" onclick="goBack()" style="margin-bottom: 16px;">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+          </button>
+          <div class="step-bar">
+            <div class="step-segment"><div class="step-fill" id="fill-1"></div></div>
+            <div class="step-segment"><div class="step-fill" id="fill-2"></div></div>
+            <div class="step-segment"><div class="step-fill" id="fill-3"></div></div>
+          </div>
+          <h2 id="order-step-title" class="section-title">Step 1: Protocol</h2>
+        </div>
+
+        <!-- Step 1: Doctor + Location Radar -->
+        <div id="order-step-1" class="order-step active">
+          <div class="doctor-block" style="border-color: var(--accent-primary); background: rgba(79, 142, 247, 0.05); cursor: default;">
+            <div class="doctor-avatar-circle" id="sd-avatar" style="background: var(--accent-gradient)">RG</div>
+            <div class="doctor-info-text">
+              <h4 id="sd-name">Dr. Ramesh Gupta</h4>
+              <p id="sd-spec" class="doctor-specialty">Cardiologist</p>
+              <p id="sd-clinic">HeartCare Clinic, Bandra</p>
+            </div>
+          </div>
+
+          <div class="location-radar-block" id="loc-radar">
+            <div class="radar-icon-container">
+              <div class="radar-circle"></div>
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+            </div>
+            <h4 id="loc-title" style="margin-bottom: 4px;">Verifying Position</h4>
+            <p id="loc-sub" style="font-size: 13px; color: var(--text-dim);">Locking GPS coordinates...</p>
+          </div>
+
+          <button class="primary-button" id="step1-next-btn" onclick="goToStep(2)" disabled>
+            <span>Proceed to Medicine Blocks</span>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+          </button>
+        </div>
+
+        <!-- Step 2: Medicine Blocks Selection -->
+        <div id="order-step-2" class="order-step">
+          <div class="medicine-grid" id="product-list">
+            <!-- Medicine Blocks populated by JS -->
+          </div>
+          <button class="primary-button" id="step2-next-btn" onclick="goToStep(3)" style="margin-top: 24px;" disabled>
+            <span>Configure Quantities</span>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+          </button>
+        </div>
+
+        <!-- Step 3: Quantity & Final Review -->
+        <div id="order-step-3" class="order-step">
+          <div id="qty-list">
+            <!-- Qty Blocks populated by JS -->
+          </div>
+          
+          <div class="stat-block" style="margin-top: 24px; border-color: var(--accent-primary)">
+            <span class="stat-label">Total Order Valuation</span>
+            <span class="stat-value" id="order-total" style="color: var(--accent-primary)">₹0.00</span>
+          </div>
+
+          <button class="primary-button" onclick="submitOrder()" style="margin-top: 24px; background: var(--success)">
+            <span>Submit Order Block</span>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+          </button>
+        </div>
+      </div>
+
+      <!-- ====== SUCCESS ====== -->
+      <div id="screen-success" class="inner-screen">
+        <div style="text-align: center; padding: 40px 0;">
+          <div class="radar-icon-container" style="background: var(--success); color: white; width: 80px; height: 80px; margin-bottom: 24px;">
+            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>
+          </div>
+          <h2 class="login-title">Order Secured</h2>
+          <p class="login-subtitle">Encryption completed. Record synced.</p>
+          
+          <div class="stat-block" style="margin: 32px 0;">
+            <span class="stat-label">Transaction ID</span>
+            <span class="stat-value" id="success-order-id" style="font-size: 16px; font-family: monospace;">#ORD-99201</span>
+          </div>
+          
+          <button class="primary-button" onclick="goToDashboard()">
+            Return to Command Center
+          </button>
+        </div>
+      </div>
+
+      <!-- ====== REPORTS ====== -->
+      <div id="screen-reports" class="inner-screen">
+        <h2 class="section-title">Submission History</h2>
+        <div class="area-grid" id="report-list">
+          <!-- Reports populated by JS -->
+        </div>
+      </div>
+
+    </main>
+
+    <!-- Bottom Nav -->
+    <nav class="bottom-nav">
+      <div class="nav-item active" id="nav-home" onclick="navTo('dashboard')">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+        <span style="font-size: 10px; font-weight: 700;">HUB</span>
+      </div>
+      <div class="nav-fab-container">
+        <div class="fab-button" onclick="startNewOrder()">
+          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        </div>
+      </div>
+      <div class="nav-item" id="nav-reports" onclick="showReports()">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+        <span style="font-size: 10px; font-weight: 700;">LOGS</span>
+      </div>
+    </nav>
+
+  </div>
+
+  <!-- Toast -->
+  <div id="toast" class="toast"></div>
+
+  <script src="app.js"></script>
+</body>
+</html>

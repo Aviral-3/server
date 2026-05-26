@@ -1,0 +1,8 @@
+{
+  "companyId": "11111111-1111-1111-1111-111111111111",
+  "name": "TestProduct",
+  "category": "TestCat",
+  "unit": "pcs",
+  "price": 10,
+  "icon": "💊"
+}

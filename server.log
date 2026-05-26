@@ -1,0 +1,39 @@
+◇ injected env (3) from .env // tip: ◈ encrypted .env [www.dotenvx.com]
+MediKL API running on http://0.0.0.0:3000
+2026-05-09T15:53:11.450Z - GET /
+2026-05-09T15:53:19.234Z - POST /api/auth/login
+Login failed for testUser1 at company 11111111-1111-1111-1111-111111111111: column users.location_tracking_enabled does not exist
+2026-05-09T15:53:24.745Z - POST /api/auth/login
+Login failed for testUser1 at company 11111111-1111-1111-1111-111111111111: column users.location_tracking_enabled does not exist
+2026-05-09T15:55:13.561Z - POST /api/auth/login
+Login failed for testUser1 at company 11111111-1111-1111-1111-111111111111: column users.location_tracking_enabled does not exist
+2026-05-09T15:55:16.394Z - POST /api/auth/login
+Login failed for testUser1 at company 11111111-1111-1111-1111-111111111111: column users.location_tracking_enabled does not exist
+2026-05-09T15:55:51.633Z - GET /
+2026-05-09T15:55:52.581Z - GET /
+2026-05-09T15:55:53.254Z - GET /sw.js
+2026-05-09T15:55:53.497Z - GET /
+2026-05-09T15:55:55.195Z - GET /sw.js
+2026-05-09T15:56:24.525Z - GET /sw.js
+2026-05-09T16:06:26.184Z - POST /api/auth/login
+Login failed for testUser1 at company 11111111-1111-1111-1111-111111111111: column users.location_tracking_enabled does not exist
+2026-05-09T16:06:41.233Z - POST /api/auth/login
+Login failed for testUser1 at company 11111111-1111-1111-1111-111111111111: column users.location_tracking_enabled does not exist
+2026-05-09T16:06:55.011Z - POST /api/auth/login
+Login failed for testUser1 at company 11111111-1111-1111-1111-111111111111: column users.location_tracking_enabled does not exist
+2026-05-09T16:08:08.952Z - POST /api/auth/login
+Login failed for testUser1 at company 11111111-1111-1111-1111-111111111111: column users.location_tracking_enabled does not exist
+2026-05-09T16:09:47.202Z - POST /api/auth/login
+Login failed for testUser1 at company 11111111-1111-1111-1111-111111111111: column users.location_tracking_enabled does not exist
+2026-05-09T16:11:21.078Z - GET /
+2026-05-09T16:11:23.125Z - GET /sw.js
+2026-05-09T16:11:52.125Z - GET /sw.js
+2026-05-09T16:15:00.024Z - POST /api/auth/login
+Login failed for testUser1 at company 11111111-1111-1111-1111-111111111111: column users.location_tracking_enabled does not exist
+2026-05-09T16:16:37.398Z - POST /api/auth/login
+Login failed for testUser1 at company 11111111-1111-1111-1111-111111111111: column users.location_tracking_enabled does not exist
+2026-05-09T16:17:48.210Z - GET /
+2026-05-09T16:17:54.894Z - POST /api/auth/login
+Login failed for testUser1 at company 11111111-1111-1111-1111-111111111111: column users.location_tracking_enabled does not exist
+2026-05-09T16:18:12.992Z - POST /api/auth/login
+Login failed for testUser1 at company 11111111-1111-1111-1111-111111111111: column users.location_tracking_enabled does not exist
