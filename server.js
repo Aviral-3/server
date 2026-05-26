@@ -1102,6 +1102,8 @@ app.post('/api/visit-schedules/bulk', async (req, res) => {
   res.json({ success: true, created: (data || []).length });
 });
 
-app.listen(PORT, '0.0.0.0', () => {
-  console.log(`MediKL API running on http://0.0.0.0:${PORT}`);
-});
+if (require.main === module) {
+  app.listen(PORT, '0.0.0.0', () => {
+    console.log(`MediKL API running on http://0.0.0.0:${PORT}`);
+  });
+}
