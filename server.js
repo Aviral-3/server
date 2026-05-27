@@ -48,12 +48,26 @@ app.use((req, res, next) => {
   next();
 });
 
+const areaMetadata = {
+  'bandra_west': { emoji: '🏙️', colors: ['#4F8EF7', '#7C5EF7'] },
+  'andheri_east': { emoji: '🌆', colors: ['#22C55E', '#4F8EF7'] },
+  'dadar': { emoji: '🏘️', colors: ['#F59E0B', '#EF4444'] },
+  'kurla': { emoji: '🌃', colors: ['#EC4899', '#8B5CF6'] },
+  'borivali': { emoji: '🌳', colors: ['#14B8A6', '#22C55E'] },
+  'mulund': { emoji: '🏗️', colors: ['#F97316', '#F59E0B'] },
+  'koramangala': { emoji: '☕', colors: ['#3B82F6', '#2DD4BF'] },
+  'indiranagar': { emoji: '🌳', colors: ['#8B5CF6', '#D946EF'] },
+  'hsr_layout': { emoji: '🏢', colors: ['#10B981', '#3B82F6'] },
+  'whitefield': { emoji: '💻', colors: ['#F43F5E', '#F59E0B'] },
+  'jayanagar': { emoji: '🏛️', colors: ['#14B8A6', '#4ADE80'] },
+};
+
 function isUuid(value) {
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(String(value));
 }
 
 function compactObject(obj) {
-  return Object.fromEntries(Object.entries(obj).filter(([, value]) => value !== undefined));
+  return Object.fromEntries(Object.entries(obj).filter(([, value]) => value !== undefined && value !== null));
 }
 
 const DEFAULT_USER_SETTINGS = Object.freeze({
@@ -410,8 +424,24 @@ app.get('/api/users/:userId/settings', async (req, res) => {
 
   if (companyId) query = query.eq('company_id', companyId);
 
-  const { data, error } = await query.single();
-  if (error || !data) return res.status(404).json({ error: 'User settings not found' });
+  let { data, error } = await query.single();
+  let role = 'user';
+
+  if (error || !data) {
+    let adminQuery = supabase
+      .from('users_admin')
+      .select('*')
+      .eq('id', userId);
+
+    if (companyId) adminQuery = adminQuery.eq('company_id', companyId);
+
+    const adminResult = await adminQuery.single();
+    if (adminResult.error || !adminResult.data) {
+      return res.status(404).json({ error: 'User settings not found' });
+    }
+    data = adminResult.data;
+    role = 'admin';
+  }
   
   const company = data.companies ? {
     id: data.companies.id,
@@ -419,7 +449,7 @@ app.get('/api/users/:userId/settings', async (req, res) => {
     code: data.companies.subdomain || data.companies.id,
   } : await resolveCompany(data.company_id);
   const settings = await fetchUserSettings(data.id, data.company_id);
-  res.json({ success: true, user: normalizeUser(data, company, settings) });
+  res.json({ success: true, user: normalizeUser({ ...data, role }, company, settings) });
 });
 
 app.patch('/api/users/:userId/settings', async (req, res) => {
@@ -437,11 +467,19 @@ app.patch('/api/users/:userId/settings', async (req, res) => {
     return res.status(400).json({ error: 'At least one setting is required' });
   }
 
-  const existingUser = await supabase
+  let existingUser = await supabase
     .from('users_client')
     .select('id, company_id')
     .eq('id', userId)
     .maybeSingle();
+
+  if (existingUser.error || !existingUser.data) {
+    existingUser = await supabase
+      .from('users_admin')
+      .select('id, company_id')
+      .eq('id', userId)
+      .maybeSingle();
+  }
 
   if (existingUser.error || !existingUser.data) {
     return res.status(404).json({ error: 'User not found' });
@@ -473,12 +511,28 @@ app.patch('/api/users/:userId/settings', async (req, res) => {
 
   if (companyId) query = query.eq('company_id', companyId);
 
-  const { data, error } = await query
-    .single();
+  let { data, error } = await query.single();
+  let role = 'user';
 
-  if (error) return res.status(500).json({ error: error.message });
+  if (error || !data) {
+    let adminQuery = supabase
+      .from('users_admin')
+      .select('*')
+      .eq('id', userId);
+
+    if (companyId) adminQuery = adminQuery.eq('company_id', companyId);
+
+    const adminResult = await adminQuery.single();
+    if (!adminResult.error && adminResult.data) {
+      data = adminResult.data;
+      role = 'admin';
+      error = null;
+    }
+  }
+
+  if (error || !data) return res.status(500).json({ error: error ? error.message : 'User not found after update' });
   const settings = await fetchUserSettings(data.id, data.company_id);
-  res.json({ success: true, user: normalizeUser(data, {}, settings) });
+  res.json({ success: true, user: normalizeUser({ ...data, role }, {}, settings) });
 });
 
 app.put('/api/users/:userId/areas', async (req, res) => {
@@ -554,6 +608,82 @@ app.post('/api/location/log', async (req, res) => {
   res.json({ success: true });
 });
 
+app.get('/api/tracking/today', async (req, res) => {
+  const { companyId } = req.query;
+  if (!companyId) return res.status(400).json({ error: 'companyId required' });
+
+  // 1. Fetch employees
+  const { data: employees, error: empError } = await supabase
+    .from('users_client')
+    .select('id, employee_id, name, email, is_active')
+    .eq('company_id', companyId);
+
+  if (empError) {
+    console.error('Tracking fetch employees error:', empError);
+    return res.status(500).json({ error: empError.message });
+  }
+
+  // 2. Fetch location logs to show route
+  const { data: logs, error: logsError } = await supabase
+    .from('location_logs')
+    .select('*')
+    .eq('company_id', companyId)
+    .order('timestamp', { ascending: true });
+
+  if (logsError) {
+    console.error('Tracking fetch logs error:', logsError);
+    return res.status(500).json({ error: logsError.message });
+  }
+
+  // 3. Fetch visit schedules
+  const { data: visits, error: visitsError } = await supabase
+    .from('visit_schedules')
+    .select('*')
+    .eq('company_id', companyId);
+
+  if (visitsError) {
+    console.error('Tracking fetch visits error:', visitsError);
+    return res.status(500).json({ error: visitsError.message });
+  }
+
+  // 4. Fetch doctors to get coordinates
+  const { data: doctors, error: docsError } = await supabase
+    .from('doctors')
+    .select('id, name, latitude, longitude, clinic_name')
+    .eq('company_id', companyId);
+
+  if (docsError) {
+    console.error('Tracking fetch doctors error:', docsError);
+    return res.status(500).json({ error: docsError.message });
+  }
+
+  // Map doctor coordinates to visits
+  const doctorMap = {};
+  if (doctors) {
+    doctors.forEach(d => {
+      doctorMap[d.id] = {
+        lat: d.latitude ? Number(d.latitude) : 0.0,
+        lng: d.longitude ? Number(d.longitude) : 0.0
+      };
+    });
+  }
+
+  const enhancedVisits = (visits || []).map(v => {
+    const coords = doctorMap[v.doctor_id] || { lat: 0.0, lng: 0.0 };
+    return {
+      ...v,
+      latitude: coords.lat,
+      longitude: coords.lng
+    };
+  });
+
+  res.json({
+    employees: employees || [],
+    logs: logs || [],
+    visits: enhancedVisits
+  });
+});
+
 app.get('/api/areas', async (req, res) => {
   const { companyId, userId } = req.query;
   if (!companyId) return res.status(400).json({ error: 'companyId required' });
@@ -597,21 +727,6 @@ app.get('/api/areas', async (req, res) => {
     }
   }
 
-  // Pre-defined rich metadata (emoji, gradient colors) for areas to keep UI beautiful and premium
-  const areaMetadata = {
-    'bandra_west': { emoji: '🏙️', colors: ['#4F8EF7', '#7C5EF7'] },
-    'andheri_east': { emoji: '🌆', colors: ['#22C55E', '#4F8EF7'] },
-    'dadar': { emoji: '🏘️', colors: ['#F59E0B', '#EF4444'] },
-    'kurla': { emoji: '🌃', colors: ['#EC4899', '#8B5CF6'] },
-    'borivali': { emoji: '🌳', colors: ['#14B8A6', '#22C55E'] },
-    'mulund': { emoji: '🏗️', colors: ['#F97316', '#F59E0B'] },
-    'koramangala': { emoji: '☕', colors: ['#3B82F6', '#2DD4BF'] },
-    'indiranagar': { emoji: '🌳', colors: ['#8B5CF6', '#D946EF'] },
-    'hsr_layout': { emoji: '🏢', colors: ['#10B981', '#3B82F6'] },
-    'whitefield': { emoji: '💻', colors: ['#F43F5E', '#F59E0B'] },
-    'jayanagar': { emoji: '🏛️', colors: ['#14B8A6', '#4ADE80'] },
-  };
-
   const areas = (areasData || [])
     .filter(a => !assignedAreaIds || assignedAreaIds.includes(a.id))
     .map(a => {
@@ -626,6 +741,96 @@ app.get('/api/areas', async (req, res) => {
     });
 
   res.json(areas);
+});
+
+// POST /api/areas
+app.post('/api/areas', async (req, res) => {
+  const { company_id, companyId, name, emoji } = req.body;
+  const targetCompanyId = companyId || company_id;
+  if (!targetCompanyId || !name) {
+    return res.status(400).json({ error: 'companyId and name are required' });
+  }
+
+  const id = name.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '') || Math.floor(100000 + Math.random() * 900000).toString();
+
+  const { data, error } = await supabase
+    .from('areas')
+    .insert([{ id, company_id: targetCompanyId, name }])
+    .select('*')
+    .single();
+
+  if (error) {
+    console.error('Create Area Error:', error);
+    return res.status(500).json({ error: error.message });
+  }
+
+  if (emoji) {
+    areaMetadata[id] = { emoji, colors: ['#4F8EF7', '#7C5EF7'] };
+  }
+
+  res.status(201).json({
+    id: data.id,
+    name: data.name,
+    emoji: emoji || '📍',
+    doctor_count: 0,
+    colors: (areaMetadata[id] || { colors: ['#4F8EF7', '#7C5EF7'] }).colors,
+  });
+});
+
+// PUT /api/areas/:id
+app.put('/api/areas/:id', async (req, res) => {
+  const { id } = req.params;
+  const { name, emoji } = req.body;
+
+  const updateData = {};
+  if (name) updateData.name = name;
+
+  const { data, error } = await supabase
+    .from('areas')
+    .update(updateData)
+    .eq('id', id)
+    .select('*')
+    .maybeSingle();
+
+  if (error) {
+    console.error('Update Area Error:', error);
+    return res.status(500).json({ error: error.message });
+  }
+
+  if (emoji) {
+    if (areaMetadata[id]) {
+      areaMetadata[id].emoji = emoji;
+    } else {
+      areaMetadata[id] = { emoji, colors: ['#4F8EF7', '#7C5EF7'] };
+    }
+  }
+
+  const meta = areaMetadata[id] || { emoji: '📍', colors: ['#4F8EF7', '#7C5EF7'] };
+
+  res.json({
+    id: id,
+    name: data ? data.name : name,
+    emoji: meta.emoji,
+    doctor_count: 0,
+    colors: meta.colors,
+  });
+});
+
+// DELETE /api/areas/:id
+app.delete('/api/areas/:id', async (req, res) => {
+  const { id } = req.params;
+
+  const { error } = await supabase
+    .from('areas')
+    .delete()
+    .eq('id', id);
+
+  if (error) {
+    console.error('Delete Area Error:', error);
+    return res.status(500).json({ error: error.message });
+  }
+
+  res.json({ success: true, message: `Area ${id} deleted successfully` });
 });
 
 app.get('/api/doctors', async (req, res) => {
@@ -644,6 +849,9 @@ app.get('/api/doctors', async (req, res) => {
       assignedAreaIds = userData.assigned_areas;
     } else {
       assignedAreaIds = [];
+    }
+    if (assignedAreaIds.length === 0) {
+      return res.json([]);
     }
   }
 
@@ -698,10 +906,23 @@ app.post('/api/doctors', async (req, res) => {
   if (!companyId || !name) {
     return res.status(400).json({ error: 'companyId and name are required' });
   }
+  const id = Math.floor(100000 + Math.random() * 900000).toString();
+  const initials = name
+    .replace(/^(dr|mr|ms|mrs|prof)\.?\s+/i, '')
+    .split(' ')
+    .filter(Boolean)
+    .map(w => w[0])
+    .join('')
+    .toUpperCase()
+    .slice(0, 3) || 'DR';
+  const colors = ['#4F8EF7', '#EC4899', '#22C55E', '#F59E0B', '#7C5EF7', '#14B8A6', '#F97316', '#EF4444'];
+  const color = colors[Math.floor(Math.random() * colors.length)];
+
   const { data, error } = await supabase
     .from('doctors')
     .insert([
         {
+          id,
           company_id: companyId,
           name,
           specialty: specialty || '',
@@ -709,6 +930,8 @@ app.post('/api/doctors', async (req, res) => {
           clinic_name: clinic_name || '',
           latitude: lat !== undefined ? Number(lat) : null,
           longitude: lng !== undefined ? Number(lng) : null,
+          initials,
+          color,
         }
     ])
     .select('*')
@@ -717,6 +940,59 @@ app.post('/api/doctors', async (req, res) => {
     console.error('Create Doctor Error:', error);
     return res.status(500).json({ error: error.message });
   }
+  res.json({ success: true, doctor: data });
+});
+
+// DELETE route to delete a doctor
+app.delete('/api/doctors/:doctorId', async (req, res) => {
+  const { doctorId } = req.params;
+  const { companyId } = req.query;
+
+  let query = supabase
+    .from('doctors')
+    .delete()
+    .eq('id', doctorId);
+
+  if (companyId) {
+    query = query.eq('company_id', companyId);
+  }
+
+  const { error } = await query;
+  if (error) {
+    console.error('Delete Doctor Error:', error);
+    return res.status(500).json({ error: error.message });
+  }
+
+  res.json({ success: true });
+});
+
+// PATCH route to update doctor coordinates
+app.patch('/api/doctors/:doctorId/location', async (req, res) => {
+  const { doctorId } = req.params;
+  const { companyId, lat, lng } = req.body;
+
+  if (lat === undefined || lng === undefined) {
+    return res.status(400).json({ error: 'lat and lng are required' });
+  }
+
+  let query = supabase
+    .from('doctors')
+    .update({
+      latitude: Number(lat),
+      longitude: Number(lng),
+    })
+    .eq('id', doctorId);
+
+  if (companyId) {
+    query = query.eq('company_id', companyId);
+  }
+
+  const { data, error } = await query.select('*').maybeSingle();
+  if (error) {
+    console.error('Update Doctor Location Error:', error);
+    return res.status(500).json({ error: error.message });
+  }
+
   res.json({ success: true, doctor: data });
 });
 
@@ -779,6 +1055,29 @@ app.post('/api/products', async (req, res) => {
       icon: data.icon || '💊',
     }
   });
+});
+
+// DELETE route to delete a product
+app.delete('/api/products/:productId', async (req, res) => {
+  const { productId } = req.params;
+  const { companyId } = req.query;
+
+  let query = supabase
+    .from('products')
+    .delete()
+    .eq('id', productId);
+
+  if (companyId) {
+    query = query.eq('company_id', companyId);
+  }
+
+  const { error } = await query;
+  if (error) {
+    console.error('Delete Product Error:', error);
+    return res.status(500).json({ error: error.message });
+  }
+
+  res.json({ success: true });
 });
 
 app.get('/api/attendance', async (req, res) => {
@@ -1102,8 +1401,6 @@ app.post('/api/visit-schedules/bulk', async (req, res) => {
   res.json({ success: true, created: (data || []).length });
 });
 
-if (require.main === module) {
-  app.listen(PORT, '0.0.0.0', () => {
-    console.log(`MediKL API running on http://0.0.0.0:${PORT}`);
-  });
-}
+app.listen(PORT, '0.0.0.0', () => {
+  console.log(`MediKL API running on http://0.0.0.0:${PORT}`);
+});
